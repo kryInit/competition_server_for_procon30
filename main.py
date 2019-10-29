@@ -1,3 +1,4 @@
+import common
 import initialization as init
 import json
 import os

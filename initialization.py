@@ -1,3 +1,4 @@
+import common
 import json
 import os
 import random
@@ -9,7 +10,6 @@ def initialize_game_info(json_date):
     if result:
         return result
 
-    match_id = json_date['id']
     json_date['startedAtUnixTime'] += int(time.time())
     make_up_for_dependent_info(json_date)
     write_game_info(json_date)
@@ -62,34 +62,43 @@ def check_if_necessary_key_existing(json_date):
 
 
 def check_if_it_has_already_been_initialized(match_id):
-    # turn == turnsであれば残していいかも->ちゃんとファイルは消そうね
-    return ""
+    result = ""
+    path = "./json/" + str(match_id) + "th_field_info.json"
+    if os.path.isfile(path):
+        with open(path, 'r') as f:
+            json_date = json.load(f)
+        if json_date['turns'] == ['turn']:
+            common.kill_game(match_id)
+        else:
+            result = "A match with matchID:" + str(match_id) + " already exists"
+
+    return result
 
 
 def check_value_of_authorization(json_date):
     result = []
     for Authorization in json_date['Authorization']:
         token = Authorization['token']
-        teamID = Authorization['teamID']
+        team_id = Authorization['teamID']
         if not type(token) is str:
             result.append("token must be str")
-        if not type(teamID) is int:
+        if not type(team_id) is int:
             result.append("Authorization's teamID must be str")
         if not 0 < len(token) <= 10 ** 5:
             result.append("token length must be from 1 to 10^5 inclusive")
-        if not 0 < teamID <= 10 ** 5:
+        if not 0 < team_id <= 10 ** 5:
             result.append("Authorization's teamID must be from 1 to 10^5 inclusive")
 
     if not result:
         token_list = []
-        teamID_list = []
+        team_id_list = []
         for Authorization in json_date['Authorization']:
             token_list.append(Authorization['token'])
-            teamID_list.append(Authorization['teamID'])
+            team_id_list.append(Authorization['teamID'])
 
         if len(token_list) != len(set(token_list)):
             result.append("contains the same token")
-        if len(teamID_list) != len(set(teamID_list)):
+        if len(team_id_list) != len(set(team_id_list)):
             result.append("contains the same Authorization's teamID")
 
     return result
@@ -168,15 +177,15 @@ def check_contradictory_value_for_initialization(json_date):
     else:
         tmp_result = []
         for team in teams:
-            teamID = team['teamID']
-            teamName = team['teamName']
-            if not type(teamID) is int:
+            team_id = team['teamID']
+            team_name = team['teamName']
+            if not type(team_id) is int:
                 tmp_result.append("teamID must be int")
-            if not type(teamName) is str:
+            if not type(team_name) is str:
                 tmp_result.append("teamName must be str")
-            if not 0 <= teamID <= 10**5:
+            if not 0 <= team_id <= 10**5:
                 tmp_result.append("teamID must be from 0 to 10^5 inclusive")
-            if not 0 < len(teamName) <= 100:
+            if not 0 < len(team_name) <= 100:
                 tmp_result.append("teamName length must be from 1 to 100 inclusive")
 
             agents = team['agents']
@@ -201,33 +210,33 @@ def check_contradictory_value_for_initialization(json_date):
             for R in tmp_result:
                 result.append(R)
         else:
-            teamID_list = []
-            teamName_list = []
-            agentID_list = []
+            team_id_list = []
+            team_name_list = []
+            agent_id_list = []
             agent_location_list = []
             for team in teams:
-                teamID_list.append(team['teamID'])
-                teamName_list.append(team['teamName'])
+                team_id_list.append(team['teamID'])
+                team_name_list.append(team['teamName'])
                 agents = team['agents']
                 for agent in agents:
-                    agentID_list.append(agent['agentID'])
+                    agent_id_list.append(agent['agentID'])
                     agent_location_list.append((agent['y'], agent['x']))
 
-            if len(teamName_list) != len(set(teamName_list)):
+            if len(team_name_list) != len(set(team_name_list)):
                 result.append("The two team Names are the same")
-            if len(agentID_list) != len(set(agentID_list)):
+            if len(agent_id_list) != len(set(agent_id_list)):
                 result.append("contains the same agentID")
             if len(agent_location_list) != len(set(agent_location_list)):
                 result.append("contains the same agent location")
 
-            if len(teamID_list) != len(set(teamID_list)):
+            if len(team_id_list) != len(set(team_id_list)):
                 result.append("contains the same teamID")
             else:
-                A_teamID_list = []
-                Authorizations_info = json_date['Authorization']
-                for A_info in Authorizations_info:
-                    A_teamID_list.append(A_info['teamID'])
-                if set(teamID_list) != set(A_teamID_list):
+                a_team_id_list = []
+                authorizations_info = json_date['Authorization']
+                for a_info in authorizations_info:
+                    a_team_id_list.append(a_info['teamID'])
+                if set(team_id_list) != set(a_team_id_list):
                     result.append("Authorization has a different teamID than teams")
 
     result = list(set(result))
@@ -238,12 +247,6 @@ def make_up_for_wanting_value(json_date):
     hgoe = 0
 
 
-# def various_delete(match_id):
-#     path = "./matchID:" + str(match_id) + "___field_information.json"
-#     if os.path.isfile(path):
-#         os.remove(path)
-
-
 def make_up_for_dependent_info(json_date):
     # tilePoint, areaPointもやろうね
     height = json_date['height']
@@ -251,11 +254,11 @@ def make_up_for_dependent_info(json_date):
     tiled = [[0]*width]*height
 
     for team in json_date['teams']:
-        teamID = team['teamID']
+        team_id = team['teamID']
         for agent in team['agents']:
             y = agent['y'] - 1
             x = agent['x'] - 1
-            tiled[y][x] = teamID
+            tiled[y][x] = team_id
     json_date['tiled'] = tiled
 
 
@@ -296,7 +299,31 @@ def write_game_info(json_date):
 
 
 def append_to_authorization(json_date):
+    path = "./json/Authorization.json"
+    auth_info = {}
+    if os.path.isfile(path):
+        with open(path, 'r') as f:
+            auth_info = json.load(f)
+        os.remove(path)
 
-    return 0
+    match_id = json_date['id']
+
+    for items in json_date['Authorization']:
+        token = items['token']
+        team_id = items['teamID']
+
+        ids = {'matchID': match_id, 'teamID': team_id}
+
+        if token in auth_info:
+            auth_info[token].append(ids)
+        else:
+            auth_info[token] = [ids]
+
+    auth_info = json.loads(json.dumps(auth_info))
+
+    with open(path, mode='w') as f:
+        json.dump(auth_info, f, indent=2)
+
+
 
 

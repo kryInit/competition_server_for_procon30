@@ -1,4 +1,6 @@
 import common
+import matches
+import matches_matchID
 import initialization as init
 import json
 import os
@@ -15,33 +17,48 @@ def initialization():
     print("\nnow initializing...\n")
 
     s = request.get_json()
-    result_massage = init.initialize_game_info(s)
+    result_message = init.initialize_game_info(s)
 
-    print("result massage = " + str(result_massage))
+    print("result message = " + str(result_message))
 
     print("\nfinished initialization!\n")
 
-    dict_for_json_result = {'result': result_massage}
+    dict_for_json_result = {'result': result_message}
 
-    json_result = json.loads(json.dumps(dict_for_json_result))
+    result_json = json.loads(json.dumps(dict_for_json_result))
 
-    return json.dumps(json_result, indent=2)
+    return json.dumps(result_json)
 
 
 @app.route('/matches')
-def return_list_of_matches():
-    hogehoge = 0
-    return hogehoge
+def pre_game_info():
+    print("\nnow making pre-game info...\n")
+
+    result_message = matches.make_pre_game_info(request.headers)
+
+    print("result message = " + str(result_message))
+
+    print("\nfinished making pre-game info!\n")
+
+    return result_message
 
 
-@app.route('/matches/<matchID>')
-def return_match_info(matchID):
-    return matchID
+@app.route('/matches/<match_id>')
+def game_state_info(match_id):
+    print("\nnow making game state info\n")
+
+    result_json = matches_matchID.make_game_state_info(int(match_id), request.headers)
+
+    print("result massage = " + str(result_json))
+
+    print("\nfinished making game state info!\n")
+
+    return json.dumps(result_json)
 
 
-@app.route('/matches/<matchID>/action', methods=["POST"])
-def update_actions(matchID):
-    return matchID
+@app.route('/matches/<match_id>/action', methods=["POST"])
+def update_actions(match_id):
+    return match_id
 
 
 @app.route('/ping')

@@ -1,21 +1,18 @@
+import common
 import os
 import json
 
 
 def make_pre_game_info(rqh):
-    if 'Authorization' not in rqh:
-        return json.loads(json.dumps({'status': 'InvalidToken'}))
+    result = common.check_authorization(rqh)
+    if result:
+        return result
 
     a_path = "./json/Authorization.json"
     token = rqh['Authorization']
 
-    if not os.path.isfile(a_path):
-        return json.loads(json.dumps({'status': 'InvalidToken'}))
-
     with open(a_path, 'r') as f:
         auth_info = json.load(f)
-    if token not in auth_info:
-        return json.loads(json.dumps({'status': 'InvalidToken'}))
 
     result = []
     idss = auth_info[token]

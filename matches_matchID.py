@@ -1,28 +1,26 @@
-import os
+import common
 import json
 import time
+import os
 
 
 def make_game_state_info(match_id, rqh):
-    if 'Authorization' not in rqh:
-        return json.loads(json.dumps({'status': 'InvalidToken'}))
+    result = common.check_authorization(rqh)
+    if result:
+        return result
 
-    a_path = "./json/Authorization.json"
     f_path = "./json/" + str(match_id) + "th_field_info.json"
+    a_path = "./json/Authorization.json"
     token = rqh['Authorization']
 
-    if not os.path.isfile(a_path) or not os.path.isfile(f_path):
+    if not os.path.isfile(f_path):
         return json.loads(json.dumps({'status': 'InvalidToken'}))
 
     with open(a_path, 'r') as f:
         auth_info = json.load(f)
-    if token not in auth_info:
-        return json.loads(json.dumps({'status': 'InvalidToken'}))
-
     with open(f_path, 'r') as f:
         field_info = json.load(f)
 
-    result = {}
     idss = auth_info[token]
     team_id = 0
     for ids in idss:
@@ -44,5 +42,6 @@ def make_game_state_info(match_id, rqh):
         result['tiled'] = field_info['tiled']
         result['teams'] = field_info['teams']
         result['actions'] = field_info['actions']
+        del result['teams'][0]['teamName'], result['teams'][1]['teamName']
 
     return json.loads(json.dumps(result))

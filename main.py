@@ -3,6 +3,7 @@ import matches
 import matches_matchID
 import update_actions as update
 import initialization as init
+import transition as trans
 import json
 import os
 import time
@@ -28,7 +29,7 @@ def initialization():
 
     result_json = json.loads(json.dumps(dict_for_json_result))
 
-    return json.dumps(result_json)
+    return str(json.dumps(result_json)) + "\n"
 
 
 @app.route('/matches')
@@ -41,7 +42,7 @@ def pre_game_info():
 
     print("\nfinished making pre-game info!\n")
 
-    return result_message
+    return str(result_message) + "\n"
 
 
 @app.route('/matches/<match_id>')
@@ -54,7 +55,7 @@ def game_state_info(match_id):
 
     print("\nfinished making game state info!\n")
 
-    return json.dumps(result_json)
+    return str(json.dumps(result_json)) + "\n"
 
 
 @app.route('/matches/<match_id>/action', methods=["POST"])
@@ -68,7 +69,7 @@ def update_actions(match_id):
 
     print("\nfinished updating actions!\n")
 
-    return json.dumps(result_json)
+    return str(json.dumps(result_json)) + "\n"
 
 
 @app.route('/ping')
@@ -87,33 +88,16 @@ def ping():
     if token not in auth_info:
         return json.loads(json.dumps({'status': 'InvalidToken'}))
 
-    return json.loads(json.dumps({'status': 'OK'}))
+    return str((json.dumps({'status': 'OK'}))) + "\n"
 
 
 def run_schedule():
-    a = kr()
     while 1:
         schedule.run_pending()
         time.sleep(1)
-        a.add()
-
-
-
-class kr():
-    a = 1
-    def add(self):
-        kr.a += 1
-
-
-def hogehoge():
-    a = kr()
-    print(a.a)
-    a.add()
-
-
 
 if __name__ == "__main__":
-    schedule.every(1).seconds.do(hogehoge)
+    schedule.every(1).seconds.do(trans.transition)
     Thread(target=run_schedule).start()
 
     common.remove_all_json_file()

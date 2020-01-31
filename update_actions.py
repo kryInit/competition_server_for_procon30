@@ -1,4 +1,5 @@
 import common
+import copy
 import json
 import time
 import os
@@ -27,13 +28,19 @@ def update_action(json_data, match_id, rqh):
         if str(ids['matchID']) == str(match_id):
             team_id = ids['teamID']
 
+    saut = field_info['startedAtUnixTime']
+    ims = field_info['intervalMillis']
+    tms = field_info['turnMillis']
+    turn = field_info['turns']
     if team_id == 0:
-        result['startAtUnixTime'] = field_info['startedAtUnixTime']
+        result['startAtUnixTime'] = saut
         result['status'] = "InvalidMatches"
-    elif int(time.time()) < field_info['startedAtUnixTime']:
-        result['startAtUnixTime'] = field_info['startedAtUnixTime']
+    elif int(time.time()) < saut:
+        result['startAtUnixTime'] = saut
         result['status'] = "TooEarly"
-    # UnacceptableTimeを追加しておく
+    elif (time.time()-saut)/((tms+tms)/1000) > turn or (time.time()-saut)%((tms+ims)/1000) >= tms/1000:
+        result['startAtUnixTime'] = saut
+        result['status'] = "UnacceptableTime"
     else:
         result = write_actions(match_id, team_id, json_data, field_info)
 
@@ -41,29 +48,36 @@ def update_action(json_data, match_id, rqh):
 
 
 def write_actions(match_id, team_id, json_data, field_info):
-    if 'actions' not in json_data:
-        return {}
-
-    path = "./json/" + str(match_id) + "-" + str(team_id) + "_actions_executed.json"
-    tpath = "./json/"+ str(match_id) + "-" + str(team_id) + "_tmp_actions_executed.json"
+    tpath = "./json/" + str(match_id) + "-" + str(team_id) + "_tmp_actions_executed.json"
+    tmp_result_actions = {'actions': field_info['actions']}
     result_actions = {'actions': []}
     tmp_actions = {}
-    actions_data = json_data['actions']
     agent_ids = set()
-
-    if os.path.isfile(path):
-        with open(path, 'r') as f:
-            result_actions = json.load(f)
 
     if os.path.isfile(tpath):
         with open(tpath, 'r') as f:
             tmp_actions = json.load(f)
 
-
     for team in field_info['teams']:
         if team['teamID'] == team_id:
             for agent in team['agents']:
                 agent_ids.add(agent['agentID'])
+
+    for i in range(len(tmp_result_actions['actions'])):
+        if tmp_result_actions['actions'][i]['agentID'] in agent_ids:
+            del tmp_result_actions['actions'][i]['apply']
+            result_actions['actions'].append(tmp_result_actions['actions'][i])
+
+    if 'actions' not in json_data:
+        for agent_id, action in tmp_actions.items():
+            if int(agent_id) in agent_ids:
+                tmp = action
+                tmp['agentID'] = agent_id
+                tmp['turn'] = field_info['turn']
+                result_actions['actions'].append(tmp)
+        return result_actions
+
+    actions_data = json_data['actions']
 
     for action in actions_data:
         keys = ['agentID', 'type', 'dx', 'dy']
@@ -81,19 +95,17 @@ def write_actions(match_id, team_id, json_data, field_info):
         dy = action['dy']
         dx = action['dx']
 
-        if (agent_id not in agent_ids) or (type != "move" and type != "remove") or (max(abs(dy), abs(dx)) > 1):
+        if (agent_id not in agent_ids) or (type != "move" and type != "remove" and type != "stay") or (max(abs(dy), abs(dx)) > 1) or (type == "stay" and (dy != 0 or dx != 0)):
             continue
 
-        tmp = {'agentID': agent_id, 'type': type, 'dy': dy, 'dx': dx, 'turn': field_info['turn']}
-        tmp_actions[str(agent_id)] = {'type': type, 'dy': dy, 'dx': dx}
+        tmp_actions[str(agent_id)] = {'type': type, 'dy': dy, 'dx': dx, 'turn': field_info['turn']}
+
+    for agent_id, action in tmp_actions.items():
+        tmp = copy.deepcopy(action)
+        tmp['agentID'] = agent_id
+        result_actions['actions'].append(tmp)
 
     with open(tpath, mode='w') as f:
         json.dump(tmp_actions, f, indent=2)
-
-    for k, v in tmp_actions.items():
-        tmp = {'agentID': k}
-        tmp.update(v)
-        tmp['turn'] = field_info['turn']
-        result_actions['actions'].append(tmp)
 
     return result_actions

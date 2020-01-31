@@ -33,6 +33,6 @@ def make_pre_game_info(rqh):
                 tmp_result['matchTo'] = team['teamName']
         result.append(tmp_result)
 
-    result = str(result)
+    result = json.dumps(result)
 
     return result

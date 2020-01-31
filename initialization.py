@@ -5,50 +5,50 @@ import random
 import time
 
 
-def initialize_game_info(json_date):
-    result = check_all_error_factor(json_date)
+def initialize_game_info(json_data):
+    result = check_all_error_factor(json_data)
     if result:
         return result
 
-    json_date['startedAtUnixTime'] += int(time.time())
-    make_up_for_dependent_info(json_date)
-    write_game_info(json_date)
-    append_to_authorization(json_date)
+    json_data['startedAtUnixTime'] += int(time.time())
+    make_up_for_dependent_info(json_data)
+    write_game_info(json_data)
+    append_to_authorization(json_data)
     result = "initialization was executed"
 
     return result
 
 
-def check_all_error_factor(json_date):
-    result = check_if_necessary_key_existing(json_date)
+def check_all_error_factor(json_data):
+    result = check_if_necessary_key_existing(json_data)
     if result:
         return result
 
-    result = check_if_it_has_already_been_initialized(json_date['id'])
+    result = check_if_it_has_already_been_initialized(json_data['id'])
     if result:
         return result
 
-    result = check_value_of_authorization(json_date)
+    result = check_value_of_authorization(json_data)
     if result:
         return result
 
-    make_up_for_wanting_value(json_date)
+    make_up_for_wanting_value(json_data)
 
-    result = check_contradictory_value_for_initialization(json_date)
+    result = check_contradictory_value_for_initialization(json_data)
     if result:
         return result
 
     return ""
 
 
-def check_if_necessary_key_existing(json_date):
+def check_if_necessary_key_existing(json_data):
     result = []
-    if 'id' not in json_date:
+    if 'id' not in json_data:
         result.append("no id")
-    if 'Authorization' not in json_date:
+    if 'Authorization' not in json_data:
         result.append("no Authorization")
     else:
-        authorizations = json_date['Authorization']
+        authorizations = json_data['Authorization']
         if len(authorizations) != 2:
             result.append("Authorization must be two")
         else:
@@ -66,8 +66,8 @@ def check_if_it_has_already_been_initialized(match_id):
     path = "./json/" + str(match_id) + "th_field_info.json"
     if os.path.isfile(path):
         with open(path, 'r') as f:
-            json_date = json.load(f)
-        if json_date['turns'] == ['turn']:
+            json_data = json.load(f)
+        if json_data['turns'] == ['turn']:
             common.kill_game(match_id)
         else:
             result = "A match with matchID:" + str(match_id) + " already exists"
@@ -75,9 +75,9 @@ def check_if_it_has_already_been_initialized(match_id):
     return result
 
 
-def check_value_of_authorization(json_date):
+def check_value_of_authorization(json_data):
     result = []
-    for Authorization in json_date['Authorization']:
+    for Authorization in json_data['Authorization']:
         token = Authorization['token']
         team_id = Authorization['teamID']
         if not type(token) is str:
@@ -92,7 +92,7 @@ def check_value_of_authorization(json_date):
     if not result:
         token_list = []
         team_id_list = []
-        for Authorization in json_date['Authorization']:
+        for Authorization in json_data['Authorization']:
             token_list.append(Authorization['token'])
             team_id_list.append(Authorization['teamID'])
 
@@ -104,7 +104,7 @@ def check_value_of_authorization(json_date):
     return result
 
 
-def check_contradictory_value_for_initialization(json_date):
+def check_contradictory_value_for_initialization(json_data):
     result = []
 
     # ------ element ------ #
@@ -118,7 +118,7 @@ def check_contradictory_value_for_initialization(json_date):
         key_name = key_name_and_range_of_value[0]
         lower_limit = key_name_and_range_of_value[1][0]
         upper_limit = key_name_and_range_of_value[1][1]
-        value = json_date[key_name]
+        value = json_data[key_name]
         if not type(value) is int:
             result.append(key_name + " must be int")
         elif not lower_limit <= value <= upper_limit:
@@ -131,8 +131,8 @@ def check_contradictory_value_for_initialization(json_date):
     # ------ list ------ #
     # check for types and ranges
 
-    height = json_date['height']
-    width = json_date['width']
+    height = json_data['height']
+    width = json_data['width']
 
     key_names = ['points']
     range_of_values = [(-10**9, 10**9)]
@@ -142,7 +142,7 @@ def check_contradictory_value_for_initialization(json_date):
         key_name = key_name_and_range_of_value[0]
         lower_limit = key_name_and_range_of_value[1][0]
         upper_limit = key_name_and_range_of_value[1][1]
-        value = json_date[key_name]
+        value = json_data[key_name]
         tmp_result = []
         if len(value) != height:
             tmp_result.append(key_name + " height must be the as 'height'")
@@ -170,7 +170,7 @@ def check_contradictory_value_for_initialization(json_date):
     # ------ teams ------ #
     # check for types and ranges and duplicates
 
-    teams = json_date['teams']
+    teams = json_data['teams']
 
     if len(teams) != 2:
         result.append("team must be two")
@@ -233,7 +233,7 @@ def check_contradictory_value_for_initialization(json_date):
                 result.append("contains the same teamID")
             else:
                 a_team_id_list = []
-                authorizations_info = json_date['Authorization']
+                authorizations_info = json_data['Authorization']
                 for a_info in authorizations_info:
                     a_team_id_list.append(a_info['teamID'])
                 if set(team_id_list) != set(a_team_id_list):
@@ -243,35 +243,35 @@ def check_contradictory_value_for_initialization(json_date):
     return result
 
 
-def make_up_for_wanting_value(json_date):
-    hgoe = 0
+def make_up_for_wanting_value(json_data):
+    pass
 
 
-def make_up_for_dependent_info(json_date):
+def make_up_for_dependent_info(json_data):
     # tilePoint, areaPointもやろうね
-    height = json_date['height']
-    width = json_date['width']
-    tiled = [[0]*width]*height
+    height = json_data['height']
+    width = json_data['width']
+    tiled = [[0] * width for i in range(height)]
 
-    for team in json_date['teams']:
+    for team in json_data['teams']:
         team_id = team['teamID']
         for agent in team['agents']:
             y = agent['y'] - 1
             x = agent['x'] - 1
             tiled[y][x] = team_id
-    json_date['tiled'] = tiled
+    json_data['tiled'] = tiled
 
 
-def write_game_info(json_date):
+def write_game_info(json_data):
     result_json = {}
     keys = ['id', 'intervalMillis', 'turnMillis', 'turns', 'startedAtUnixTime', 'height', 'width', 'points', 'tiled']
     for key in keys:
-        result_json[key] = json_date[key]
+        result_json[key] = json_data[key]
     result_json['turn'] = 0
 
     result_teams = []
 
-    for team in json_date['teams']:
+    for team in json_data['teams']:
         result_team = {}
         team_keys = ['teamID', 'teamName', 'tilePoint', 'areaPoint']
         for key in team_keys:
@@ -292,13 +292,13 @@ def write_game_info(json_date):
 
     result_json['actions'] = []
 
-    path = "./json/" + str(json_date['id']) + "th_field_info.json"
+    path = "./json/" + str(json_data['id']) + "th_field_info.json"
 
     with open(path, mode='w') as f:
         json.dump(result_json, f, indent=2)
 
 
-def append_to_authorization(json_date):
+def append_to_authorization(json_data):
     path = "./json/Authorization.json"
     auth_info = {}
     if os.path.isfile(path):
@@ -306,9 +306,9 @@ def append_to_authorization(json_date):
             auth_info = json.load(f)
         os.remove(path)
 
-    match_id = json_date['id']
+    match_id = json_data['id']
 
-    for items in json_date['Authorization']:
+    for items in json_data['Authorization']:
         token = items['token']
         team_id = items['teamID']
 

@@ -88,7 +88,8 @@ def create_actions(match_id, team_ids):
             if agent_id in tmp_dict:
                 tmp_dict[agent_id]['y'] = agent['y']
                 tmp_dict[agent_id]['x'] = agent['x']
-
+            else:
+                tmp_dict[agent_id] = {'type': "stay", 'x': agent['x'], 'y': agent['y'], 'dx': 0, 'dy': 0, 'turn': field_info['turn']}
     for agent_id, other in tmp_dict.items():
         other['agentID'] = agent_id
         result.append(other)
@@ -156,10 +157,8 @@ def update_field_info(match_id, actions):
         apply = action['apply']
         id_actions[agent_id] = {"type": type, "dx": dx, "dy": dy, "apply": apply}
 
-    for i in range(2):
-        team = field_info['teams'][i]
-        for j in range(len(team['agents'])):
-            agent = team['agents'][j]
+    for team in field_info['teams']:
+        for agent in team['agents']:
             agent_id = str(agent['agentID'])
             y = agent['y']
             x = agent['x']
@@ -174,9 +173,8 @@ def update_field_info(match_id, actions):
                         field_info['tiled'][y-1][x-1] = team['teamID']
                     if type == "remove":
                         field_info['tiled'][y+dy-1][x+dx-1] = 0
-            team['agents'][j]['y'] = y
-            team['agents'][j]['x'] = x
-        field_info['teams'][i] = team
+            agent['y'] = y
+            agent['x'] = x
 
     for action in actions:
         action['turn'] = field_info['turn']
@@ -186,8 +184,68 @@ def update_field_info(match_id, actions):
     for action in actions:
         field_info['actions'].append(action)
 
+    calc_scores(field_info)
+
     with open(f_path, mode='w') as f:
         json.dump(field_info, f, indent=2)
+
+
+def calc_scores(field_info):
+    for team in field_info['teams']:
+        team_id = team['teamID']
+        tmp_tile_points = 0
+        height = field_info['height']
+        width = field_info['width']
+        for i in range(height):
+            for j in range(width):
+                if field_info['tiled'][i][j] == team_id:
+                    tmp_tile_points += field_info['points'][i][j]
+        team['tilePoint'] = tmp_tile_points
+        team['areaPoint'] = calc_area_score(field_info, team_id)
+
+
+def calc_area_score(field_info, team_id):
+    dx = [1, 0, -1, 0]
+    dy = [0, 1, 0, -1]
+    tiled = field_info['tiled']
+    points = field_info['points']
+    height = field_info['height']
+    width = field_info['width']
+    region = [[0]*20 for i in range(20)]
+    for i in range(20):
+        for j in range(20):
+            region[i][j] = 1
+
+    def dfs(y, x):
+        if tiled[y][x] == team_id:
+            return
+        region[y][x] = 0
+        for i in range(4):
+            Y = y+dy[i]
+            X = x+dx[i]
+            if 0 <= Y < height and 0 <= X < width:
+                if region[Y][X]:
+                    dfs(Y, X)
+
+    area_score = 0
+    for i in range(height):
+        dfs(i, 0)
+        dfs(i, width-1)
+    for i in range(width):
+        dfs(0, i)
+        dfs(height-1, i)
+
+    tmp_region = [[0]+region[i-1]+[0] if 0 < i <= 20 else [0]*22 for i in range(22)]
+    for y in range(1, height):
+        for x in range(1, width):
+            f = tiled[y-1][x-1] != team_id
+            for k in range(4):
+                if not tmp_region[y+dy[k]][x+dx[k]]:
+                    f = False
+            if f:
+                area_score += abs(points[y-1][x-1])
+
+    return area_score
 
 
 def delete_file(match_id, team_ids):

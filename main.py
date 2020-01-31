@@ -72,6 +72,35 @@ def update_actions(match_id):
     return str(json.dumps(result_json)) + "\n"
 
 
+@app.route('/matches/<match_id>/delete')
+def delete_game(match_id):
+    print("\nnow deleting " + str(match_id) + "th game ...\n")
+
+    is_ok = True
+    a_path = "./json/Authorization.json"
+    tokens = request.headers['Authorization'].split(',')
+    with open(a_path, 'r') as f:
+        auth = json.load(f)
+
+    for token, _matches in auth.items():
+        for match in _matches:
+            if str(match['matchID']) == str(match_id) and (token not in tokens):
+                is_ok = False
+
+    result_json = {}
+    if is_ok:
+        common.kill_game(match_id)
+        result_json = {'result': str(match_id) + "th game was deleted"}
+    else:
+        result_json = {'result': str(match_id) + "th game can't be deleted"}
+
+    print("result_massage = " + str(result_json))
+
+    print("\nfinished deleting " + str(match_id) + "th game!\n")
+
+    return str(json.dumps(result_json)) + "\n"
+
+
 @app.route('/ping')
 def ping():
     if 'Authorization' not in request.headers:

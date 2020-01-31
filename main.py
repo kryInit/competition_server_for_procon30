@@ -77,18 +77,28 @@ def delete_game(match_id):
     print("\nnow deleting " + str(match_id) + "th game ...\n")
 
     is_ok = True
+    cnt = 0
     a_path = "./json/Authorization.json"
     tokens = request.headers['Authorization'].split(',')
+    if not os.path.isfile(a_path):
+        result_json = {'result': "Authorization does not exist"}
+        print("result_massage = " + str(result_json))
+        print("\nfinished deleting " + str(match_id) + "th game!\n")
+        return str(json.dumps(result_json)) + "\n"
+
     with open(a_path, 'r') as f:
         auth = json.load(f)
 
     for token, _matches in auth.items():
         for match in _matches:
-            if str(match['matchID']) == str(match_id) and (token not in tokens):
-                is_ok = False
+            if str(match['matchID']) == str(match_id):
+                cnt += 1
+                if token not in tokens:
+                    is_ok = False
 
-    result_json = {}
-    if is_ok:
+    if cnt < 2:
+        result_json = {'result': str(match_id) + "th game does not exist"}
+    elif is_ok:
         common.kill_game(match_id)
         result_json = {'result': str(match_id) + "th game was deleted"}
     else:
@@ -120,10 +130,14 @@ def ping():
     return str((json.dumps({'status': 'OK'}))) + "\n"
 
 
+run_flag = True
+
+
 def run_schedule():
-    while 1:
+    while run_flag:
         schedule.run_pending()
         time.sleep(1)
+
 
 if __name__ == "__main__":
     schedule.every(1).seconds.do(trans.transition)
@@ -134,4 +148,5 @@ if __name__ == "__main__":
     app.run(host='localhost', port=8000)
 
     common.remove_all_json_file()
+    run_flag = False
 
